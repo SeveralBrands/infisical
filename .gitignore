@@ -5,7 +5,7 @@ node_modules
 .env.gamma
 .env.prod
 .env.infisical
-
+.elasticbeanstalk/
 *~
 *.swp
 *.swo

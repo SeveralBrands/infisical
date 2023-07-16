@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mongo
-    image: infisical/backend
+    image: infisical/backend:39feb9a
     env_file: .env
     environment:
       - NODE_ENV=production
