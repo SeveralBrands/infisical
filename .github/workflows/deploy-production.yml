@@ -21,6 +21,8 @@ jobs:
 
       - name: Generate deployment package
         run: zip -r deploy.zip . -x '*.git*'
+      - name: echo
+        run: echo "${{ secrets.AWS_ACCESS_KEY_ID }}"
 
       - name: Deploy to EB
         uses: einaregilsson/beanstalk-deploy@v16
