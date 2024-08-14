@@ -19,8 +19,6 @@ services:
   backend:
     container_name: infisical-backend
     restart: unless-stopped
-    depends_on:
-      - mongo
     image: infisical/backend:v0.14.0
     env_file: .env
     environment:
