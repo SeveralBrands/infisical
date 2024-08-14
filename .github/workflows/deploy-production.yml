@@ -28,7 +28,7 @@ jobs:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: secrets
-          environment_name: secrets-production
+          environment_name: secrets-production-v2
           version_label: secrets-production-${{github.run_number}}-${{steps.date.outputs.date}}
           region: us-east-1
           deployment_package: deploy.zip
