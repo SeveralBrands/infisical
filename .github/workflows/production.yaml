@@ -1,0 +1,108 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning.
+
+name: Deploy Secrets to Amazon ECS (Production)
+
+on:
+  push:
+    branches:
+      - move-to-ecs
+
+env:
+  AWS_REGION: us-east-1                    # set this to your preferred AWS region, e.g. us-west-1
+  ECS_CLUSTER: Secrets                 # set this to your Amazon ECS cluster name
+  
+  ECR_REPOSITORY: secrets-nginx         # set this to your Amazon ECR repository name
+  ECS_SERVICE: secrets-nginx            # set this to your Amazon ECS service name
+  
+  ECS_TASK_DEFINITION: secrets-nginx-task-definition.json # set this to the path to your Amazon ECS task definition                                          # file, e.g. .aws/task-definition.json
+  CONTAINER_NAME: secrets-nginx # set this to the name of the container in the
+  
+jobs:
+  deploy-nginx:
+    name: Deploy Nginx
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Check if there is changes
+        id: code-change
+        uses: tj-actions/changed-files@v39
+        with:
+          files_yaml: |
+            nginx:
+              - 'nginx/**/*'
+            src:
+              - /
+      - name: Configure AWS credentials
+        if: steps.code-change.outputs.nginx_any_changed == 'true'
+        uses: aws-actions/configure-aws-credentials@0e613a0980cbf65ed5b322eb7a1e075d28913a83
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        if: steps.code-change.outputs.nginx_any_changed == 'true'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@62f4f872db3836360b72999f4b87f1ff13310f3a
+      - name: Download Nginx task definition
+        if: steps.code-change.outputs.nginx_any_changed == 'true'  
+        run: |
+          aws ecs describe-task-definition --task-definition secrets-nginx --query taskDefinition > secrets-nginx-task-definition.json
+      - name: Build, tag, and push image to Amazon ECR
+        if: steps.code-change.outputs.nginx_any_changed == 'true'
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: "production-${{ github.sha }}"
+        run: |
+          # Build a docker container and
+          # push it to ECR so that it can
+          # be deployed to ECS.
+          cd nginx
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          cd ../
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        if: steps.code-change.outputs.nginx_any_changed == 'true'
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        if: steps.code-change.outputs.nginx_any_changed == 'true'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+  
+  app-slack:
+    needs: [deploy-nginx] 
+    name: App Slack Notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: "Deploy Bot Secrets App"
+          SLACK_CHANNEL: "severalbrands-cms-notifications"
+          SLACK_ICON: "https://s3.eu-west-1.amazonaws.com/cdn.severalbrands.com/deploy-assets/deploy-bot.jpeg"
+          SLACK_FOOTER: "Powered By: SeveralBrands tech team 🚀"
+  
