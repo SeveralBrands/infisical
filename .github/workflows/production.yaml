@@ -91,18 +91,18 @@ jobs:
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
   
-  app-slack:
-    needs: [deploy-nginx] 
-    name: App Slack Notification
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Slack Notification
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_USERNAME: "Deploy Bot Secrets App"
-          SLACK_CHANNEL: "severalbrands-cms-notifications"
-          SLACK_ICON: "https://s3.eu-west-1.amazonaws.com/cdn.severalbrands.com/deploy-assets/deploy-bot.jpeg"
-          SLACK_FOOTER: "Powered By: SeveralBrands tech team 🚀"
+  # app-slack:
+  #   needs: [deploy-nginx] 
+  #   name: App Slack Notification
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Slack Notification
+  #       uses: rtCamp/action-slack-notify@v2
+  #       env:
+  #         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  #         SLACK_USERNAME: "Deploy Bot Secrets App"
+  #         SLACK_CHANNEL: "severalbrands-cms-notifications"
+  #         SLACK_ICON: "https://s3.eu-west-1.amazonaws.com/cdn.severalbrands.com/deploy-assets/deploy-bot.jpeg"
+  #         SLACK_FOOTER: "Powered By: SeveralBrands tech team 🚀"
   
